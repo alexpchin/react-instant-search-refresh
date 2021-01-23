@@ -11,11 +11,14 @@ import { connectInfiniteHits, InstantSearch } from "react-instantsearch-native";
 
 const { width } = Dimensions.get("window");
 
+// Need to change to a project with valid permissions
 const searchClient = algoliasearch(
   "latency",
   "6be0576ff61c053d5f9a3225e2a90f76"
 );
 
+// Would normally be on the back-end
+// Need to change to an index with valid permissions
 const photosIndex = searchClient.initIndex("photos");
 
 const Hits = ({ hasMore, refine, hits, refreshing, onRefresh }) => {
@@ -63,11 +66,21 @@ const Hits = ({ hasMore, refine, hits, refreshing, onRefresh }) => {
 
 const ConnectedHits = connectInfiniteHits(Hits);
 
+export const useAlgolia = () => {
+  /**
+   * `useMemo` prevents the searchClient from being recreated on every render.
+   * - Avoids unnecessary XHR requests (see https://tinyurl.com/yyj93r2s).
+   **/
+  const searchClientMemo = useMemo(() => searchClient, []);
+  return searchClientMemo;
+};
+
 export const useAlgoliaRefresh = (searchClient) => {
   const [refreshing, setRefreshing] = useState(false);
   const refresh = useCallback(() => {
     if (refreshing) return;
     // To change 'refresh' on InstantSearch
+    // As per: https://www.algolia.com/doc/api-reference/widgets/instantsearch/react/#widget-param-refresh
     setRefreshing(true);
     // To manually clear cache
     if (searchClient && typeof searchClient.clearCache === "function") {
@@ -79,15 +92,11 @@ export const useAlgoliaRefresh = (searchClient) => {
 };
 
 export default function App() {
-  /**
-   * `useMemo` prevents the searchClient from being recreated on every render.
-   * - Avoids unnecessary XHR requests (see https://tinyurl.com/yyj93r2s).
-   **/
-  const searchClientMemo = useMemo(() => searchClient, []);
-  const [refresh, { refreshing }] = useAlgoliaRefresh(searchClientMemo);
+  const searchClient = useAlgolia();
+  const [refresh, { refreshing }] = useAlgoliaRefresh(searchClient);
   return (
     <InstantSearch
-      searchClient={searchClientMemo}
+      searchClient={searchClient}
       refresh={refreshing}
       indexName="instant_search"
     >
